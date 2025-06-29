@@ -1,8 +1,58 @@
 const express = require('express');
-const users = require("./MOCK_DATA.json");
+
+//ye pehle k liye thaa but ab mujhe users dB mai se lane hain
+// const users = require("./MOCK_DATA.json");
 const app = express();
+const mongoose = require("mongoose");
+
 const PORT = 8000;
 const fs = require("fs");
+
+//Connection
+//mongoose.connect("URL jo terminal pe ho../db ko ek naam do"); - ek promise return krega
+mongoose
+    .connect("mongodb://127.0.0.1:27017/youtube-app-1")
+    .then(() => console.log("Mongoose Connected"))
+    .catch((err) => console.log("Mongo error"));
+//Schema
+const userSchema = new mongoose.Schema({
+    firstName: {
+        type: String,
+        required: true,
+    },
+
+    lastName: {
+        type: String,
+        required: false,
+    },
+
+    email: {
+        type: String,
+        required: true,
+        unique: true,
+    },
+
+    gender: {
+        type: String,
+        required: true,
+    },
+
+    ipAddress: {
+    type: String,
+    required: true
+},
+    jobTitle: {
+    type: String,
+    required: false
+}
+}
+//To get created at and updated at time
+// , {timestamps: true}
+)
+
+//Model
+const User = mongoose.model('user', userSchema);
+
 
 //MiddleWare- plugin
 //ye pehle h so ye pehle call hogaa aur apne next mei our middleware ko point krega
@@ -24,46 +74,79 @@ app.use( (req, res, next) => {
     next();
 })
 
-app.get("/users", (req, res) => {
-    console.log(req.myUserName);
-    const html = `
-    <ul>
-        ${users.map((user)=> `<li>${user.first_name}</li>`)}
-    </ul>
-    `;
-    res.send(html);
-});
+// app.get("/users", async (req, res) => {
+//     // console.log(req.headers);
+//     // res.setHeader("X-MyName", "Charul"); //Custom header
+//     //Always add x to custom headers
 
-//Routes
-//GET - list all the data
-app.get("/api/users", (req, res) => {
-    return res.json(users);
-})
+//     // console.log(req.myUserName);
 
-app.get("/api/users/:id", (req, res) => {
-    const id = Number(req.params.id);
-    const user = users.find((user) => user.id === id);
-    return res.json(user);
-})
+//     const allDbUsers = await User.find({});
+//     const html = `
+//     <ul>
+//         ${allDbUsers.map((user)=> `<li>${user.firstName} - ${user.email}</li>`)}
+//     </ul>
+//     `;
+//     res.send(html);
+// });
+
+// //Routes
+// //GET - list all the data
+// app.get("/api/users", async (req, res) => {
+//     //after using dB
+//     const allDbUsers = await User.find({});
+    
+//     return res.json(allDbUsers);
+// })
+
+// app.get("/api/users/:id", (req, res) => {
+//     const id = Number(req.params.id);
+//     // const user = User.find((user) => user.id === id);
+//     // if(!user) return res.status(404).json({msg: "user not found"})
+//     // return res.json(user);
+// })
 
 //Kyunki inn sbb k routes same hain toh hum ye vi krr skte hain
-app.route("/api/users/:id").get((req, res) => {
-    const id = Number(req.params.id);
-    const user = users.find((user) => user.id === id);
+app.route("/api/users/:id").get(async (req, res) => {
+    //pehle hum id ko find krr rhe thee ab ye nhi krenge
+    const user = await User.findById(req.params.id);
+    if(!user) return res.status(404).json({error: "User not found"});
+    // const id = Number(req.params.id);
+    // const user = users.find((user) => user.id === id);
     return res.json(user);
-}).patch((req, res) => {
-    return res.json({status: "pending"});
-}).delete((req, res)=>{
-    return res.json({status: "pending"});
+}).patch(async (req, res) => {
+    //abhi toh hard coded hi h
+    await User.findByIdAndUpdate(req.params.id, {lastname: "Changed"});
+    return res.json({status: "Success"});
+}).delete(async (req, res)=>{
+    await User.findByIdAndDelete(req.params.id);
+    return res.json({status: "Success"});
 })
 
-app.post('/api/users', ((req, res) => {
+//asyn bnao when want to insert in mongodB
+app.post('/api/users', async (req, res) => {
 const body = req.body;
-users.push({...body, id: users.length + 1});
-fs.writeFile('./MOCK_DATA.json', JSON.stringify(users), (err, data) => {
-    return res.json({status: "success", id: users.length});
+//400 - Bad request
+if(!body || !body.first_name || !body.last_name || !body.email || !body.ip_address || !body.gender || !body.job_title){
+    return res.status(400).json({msg: "All fields are req..."});
+}
+
+const result = await User.create({
+    firstName: body.first_name,
+    lastName: body.last_name,
+    email: body.email,
+    ipAddress: body.ip_address,
+    gender: body.gender,
+    jobTitle: body.job_title,
+});
+
+return res.status(201).json(result);
+//ye nhi krenge
+// users.push({...body, id: users.length + 1});
+// fs.writeFile('./MOCK_DATA.json', JSON.stringify(users), (err, data) => {
+    return res.status(201).json({status: "success", id: users.length});
 })
-}))
+// }))
 
 // app.patch('/api/users/:id', ((req, res) => {
 //     //TODO: Update user
