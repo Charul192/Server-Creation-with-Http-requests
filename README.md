@@ -88,3 +88,7 @@ task.txt and test.txt are user-defined files, probably for notes or testing.
 - Setup Swagger/OpenAPI docs
 - Add frontend to visualize the users
 - Deploy on Render/Vercel/Glitch with MongoDB Atlas
+
+## 👩‍💻 Author
+- Made with ❤️ by Charul192
+- Feel free to connect or contribute!
